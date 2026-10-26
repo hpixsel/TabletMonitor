@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home screen -->
+    <string name="home_subtitle">Dodatkowy ekran dla Twojego komputera</string>
+    <string name="status_ready">Gotowy do połączenia</string>
+    <string name="status_visible_as">Widoczny jako „%1$s”</string>
+    <string name="computers_nearby">Komputery w pobliżu</string>
+    <string name="connect">Połącz</string>
+    <string name="waiting_for_pc">Czekam na komputer… Jeśli to pierwsze połączenie, zatwierdź je na komputerze.</string>
+    <string name="searching_computers">Szukam komputerów z TabletMonitor…</string>
+    <string name="tip_run_pc">Uruchom TabletMonitor na komputerze z Windows.</string>
+    <string name="tip_wifi">Połącz tablet z tą samą siecią Wi-Fi co komputer.</string>
+    <string name="tip_usb">Albo podłącz go kablem USB z włączonym debugowaniem USB – komputer połączy się sam.</string>
+    <string name="hint_back_twice">Podczas pracy naciśnij dwa razy Wstecz, aby wyłączyć ekran.</string>
+    <string name="pc_not_responding">%1$s nie odpowiedział. Sprawdź, czy połączenie nie czeka na zgodę na komputerze.</string>
+
+    <!-- Stream screen -->
+    <string name="starting_screen">Uruchamiam ekran…</string>
+    <string name="connected_to">Połączono z %1$s</string>
+    <string name="press_back_again">Naciśnij jeszcze raz, aby wyłączyć ekran</string>
+
+    <!-- Disconnect reasons -->
+    <string name="reason_app_closed">Aplikacja zamknięta</string>
+    <string name="reason_disconnected">Rozłączono</string>
+    <string name="reason_pc_not_responding">Komputer przestał odpowiadać</string>
+    <string name="reason_pc_ended">Komputer zakończył połączenie</string>
+    <string name="reason_connection_lost">Połączenie przerwane</string>
+    <string name="reason_screen_off_on_pc">Ekran wyłączony na komputerze</string>
+</resources>

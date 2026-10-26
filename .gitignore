@@ -1,0 +1,11 @@
+bin/
+obj/
+build/
+*.user
+.vs/
+
+# Personal assistant instructions
+CLAUDE.md
+
+# Downloaded by build.ps1 (Android SDK Platform-Tools are not redistributed in this repository)
+third_party/adb/

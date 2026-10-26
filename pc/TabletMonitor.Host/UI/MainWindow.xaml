@@ -1,0 +1,384 @@
+<Window x:Class="TabletMonitor.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="clr-namespace:TabletMonitor.UI"
+        xmlns:loc="clr-namespace:TabletMonitor.Localization"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance ui:MainViewModel}"
+        Title="TabletMonitor"
+        Icon="/Assets/app.ico"
+        Width="860" Height="720" MinWidth="560" MinHeight="480"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- One discovered tablet -->
+        <DataTemplate x:Key="DeviceTemplate" DataType="{x:Type ui:DeviceViewModel}">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,8" Padding="16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Style="{StaticResource IconWell}" Margin="0,0,16,0">
+                        <TextBlock Style="{StaticResource Icon}" Text="{Binding Glyph}" FontSize="22" HorizontalAlignment="Center" />
+                    </Border>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource BodyStrongText}" Text="{Binding DisplayName}" />
+                            <Border Style="{StaticResource Badge}" Margin="10,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{Binding TransportGlyph}" FontSize="11" Margin="0,0,5,0" />
+                                    <TextBlock Text="{Binding TransportText}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource CaptionText}" Text="{Binding Details}" Margin="0,2,0,0"
+                                   Visibility="{Binding Details, Converter={StaticResource NotEmptyToVisibility}}" />
+                        <TextBlock Style="{StaticResource CaptionText}" Text="{Binding StatusText}" Margin="0,4,0,0"
+                                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                   Visibility="{Binding StatusText, Converter={StaticResource NotEmptyToVisibility}}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                        <ProgressBar Style="{StaticResource Spinner}" Margin="0,0,12,0"
+                                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+                        <Button Content="{Binding ActionText}" MinWidth="120"
+                                Style="{StaticResource AccentButtonStyle}"
+                                IsEnabled="{Binding CanAct}"
+                                Command="{Binding DataContext.DeviceActionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Margin="32,24,32,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Image Source="/Assets/app.ico" Width="40" Height="40" Margin="0,0,14,0" RenderOptions.BitmapScalingMode="HighQuality" />
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Style="{StaticResource TitleText}" Text="TabletMonitor" FontSize="24" />
+                <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.AppSubtitle}" />
+            </StackPanel>
+            <Border Grid.Column="2" Style="{StaticResource Badge}" Padding="12,6">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="8" Height="8" Margin="0,0,8,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                        <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="32,8,32,32">
+
+                <!-- Connection request from a tablet -->
+                <Border Style="{StaticResource Card}" Margin="0,8,0,0"
+                        Background="{DynamicResource SystemFillColorAttentionBackgroundBrush}"
+                        Visibility="{Binding PendingRequestName, Converter={StaticResource NotEmptyToVisibility}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource Icon}" Text="&#xE70A;" FontSize="24" Margin="0,0,16,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyStrongText}">
+                                <Run Text="{Binding PendingRequestName, Mode=OneWay}" /><Run Text="{x:Static loc:Strings.WantsToConnect}" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.WantsToConnectHint}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="{x:Static loc:Strings.Reject}" Margin="0,0,8,0" MinWidth="90" Command="{Binding RejectRequestCommand}" />
+                            <Button Content="{x:Static loc:Strings.Allow}" MinWidth="90" Style="{StaticResource AccentButtonStyle}" Command="{Binding ApproveRequestCommand}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- First run: driver installation -->
+                <Border Style="{StaticResource Card}" Margin="0,8,0,0" Padding="28"
+                        Visibility="{Binding NeedsSetup, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <Border Width="56" Height="56" CornerRadius="14" Background="{StaticResource BrandBrush}" HorizontalAlignment="Left">
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xE7F4;" FontSize="26" Foreground="White" HorizontalAlignment="Center" />
+                        </Border>
+                        <TextBlock Style="{StaticResource SubtitleText}" Text="{Binding SetupTitle}" Margin="0,18,0,6" />
+                        <TextBlock Style="{StaticResource SecondaryText}" MaxWidth="560" HorizontalAlignment="Left"
+                                   Text="{Binding SetupText}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                            <Button Style="{StaticResource AccentButtonStyle}" Padding="20,8" Command="{Binding InstallCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="&#xE896;" FontSize="14" Margin="0,0,8,0" Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{Binding SetupButton}" />
+                                </StackPanel>
+                            </Button>
+                            <ProgressBar Style="{StaticResource Spinner}" Margin="16,0,0,0"
+                                         Visibility="{Binding IsInstalling, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource CaptionText}" Text="{Binding SetupError}" Margin="0,12,0,0"
+                                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                   Visibility="{Binding SetupError, Converter={StaticResource NotEmptyToVisibility}}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Active tablet -->
+                <StackPanel Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibility}}">
+                    <Border Style="{StaticResource Card}" Margin="0,8,0,0" Padding="24">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="56" Height="56" CornerRadius="14" Background="{StaticResource BrandBrush}" Margin="0,0,16,0">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{Binding ActiveDevice.Glyph}" FontSize="26" Foreground="White" HorizontalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Style="{StaticResource SubtitleText}" Text="{Binding ActiveDevice.DisplayName}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <Ellipse Width="8" Height="8" Fill="{DynamicResource SystemFillColorSuccessBrush}" Margin="0,0,8,0" />
+                                        <TextBlock Style="{StaticResource CaptionText}">
+                                            <Run Text="{x:Static loc:Strings.WorksAsExtraDisplay}" /><Run Text="{Binding ActiveDevice.TransportText, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                                <Button Grid.Column="2" Padding="16,8" VerticalAlignment="Center" Command="{Binding DisconnectCommand}"
+                                        ToolTip="{x:Static loc:Strings.TurnOffScreenTooltip}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource Icon}" Text="&#xE7E8;" FontSize="14" Margin="0,0,8,0" />
+                                        <TextBlock Text="{x:Static loc:Strings.TurnOffScreen}" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <WrapPanel Margin="0,20,0,0">
+                                <Border Style="{StaticResource StatTile}" Margin="0,0,8,8">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding StatResolution}" />
+                                        <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.StatResolution}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource StatTile}" Margin="0,0,8,8">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding StatFps}" />
+                                        <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.StatFps}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource StatTile}" Margin="0,0,8,8">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding StatBitrate}" />
+                                        <TextBlock Style="{StaticResource CaptionText}" Text="Mb/s" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource StatTile}" Margin="0,0,8,8">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding StatLatency}" />
+                                        <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.StatPing}" />
+                                    </StackPanel>
+                                </Border>
+                            </WrapPanel>
+                            <TextBlock Style="{StaticResource CaptionText}" Margin="2,4,0,0">
+                                <Run Text="{x:Static loc:Strings.Encoder}" /><Run Text="{Binding StatEncoder, Mode=OneWay}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="{x:Static loc:Strings.DisplaySettings}" />
+                    <Border Style="{StaticResource Card}" Padding="0">
+                        <StackPanel>
+                            <StackPanel.Resources>
+                                <Style TargetType="Grid" x:Key="SettingRow">
+                                    <Setter Property="Margin" Value="20,12" />
+                                    <Setter Property="MinHeight" Value="36" />
+                                </Style>
+                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                    <Setter Property="Width" Value="260" />
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                </Style>
+                            </StackPanel.Resources>
+
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Icon}" Text="&#xE740;" Margin="0,0,16,0" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.Resolution}" />
+                                    <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.ResolutionHint}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="2" ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" />
+                            </Grid>
+                            <Separator Margin="0" />
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Icon}" Text="&#xE916;" Margin="0,0,16,0" />
+                                <TextBlock Grid.Column="1" Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.RefreshRate}" />
+                                <ComboBox Grid.Column="2" ItemsSource="{Binding RefreshOptions}" SelectedItem="{Binding SelectedRefresh}" />
+                            </Grid>
+                            <Separator Margin="0" />
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Icon}" Text="&#xE8B9;" Margin="0,0,16,0" />
+                                <TextBlock Grid.Column="1" Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.ImageQuality}" />
+                                <ComboBox Grid.Column="2" ItemsSource="{Binding QualityOptions}" SelectedItem="{Binding SelectedQuality}" />
+                            </Grid>
+                            <Separator Margin="0" />
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Icon}" Text="&#xE8A3;" Margin="0,0,16,0" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.Scaling}" />
+                                    <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.ScalingHint}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="2" ItemsSource="{Binding ScaleOptions}" SelectedItem="{Binding SelectedScale}" />
+                            </Grid>
+                            <Separator Margin="0" />
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Icon}" Text="&#xE7AD;" Margin="0,0,16,0" />
+                                <TextBlock Grid.Column="1" Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.Orientation}" />
+                                <ComboBox Grid.Column="2" ItemsSource="{Binding OrientationOptions}" SelectedItem="{Binding SelectedOrientation}" />
+                            </Grid>
+                            <Separator Margin="0" />
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Icon}" Text="&#xE71B;" Margin="0,0,16,0" />
+                                <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding AutoConnect}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.AutoConnect}" />
+                                        <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.AutoConnectHint}" />
+                                    </StackPanel>
+                                </CheckBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Device list -->
+                <StackPanel Visibility="{Binding ShowDeviceArea, Converter={StaticResource BoolToVisibility}}">
+                    <Grid>
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="{x:Static loc:Strings.AvailableDevices}" />
+                        <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,4"
+                                Command="{Binding RefreshCommand}" ToolTip="{x:Static loc:Strings.SearchAgain}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Icon}" Text="&#xE72C;" FontSize="12" Margin="0,0,6,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                <TextBlock Text="{x:Static loc:Strings.Refresh}" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Devices}" ItemTemplate="{StaticResource DeviceTemplate}" />
+
+                    <!-- Empty state -->
+                    <Border Style="{StaticResource Card}" Padding="28"
+                            Visibility="{Binding HasNoDevices, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <ProgressBar Style="{StaticResource Spinner}" Margin="0,0,14,0" />
+                                <TextBlock Style="{StaticResource BodyStrongText}" Text="{x:Static loc:Strings.SearchingTablets}" />
+                            </StackPanel>
+                            <Grid Margin="0,20,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Border Style="{StaticResource Badge}" Width="24" Height="24" Padding="0" CornerRadius="12" Margin="0,0,12,12" VerticalAlignment="Top">
+                                    <TextBlock Text="1" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="0,2,0,12">
+                                    <TextBlock Style="{StaticResource BodyText}" Text="{x:Static loc:Strings.Step1}" />
+                                    <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Margin="-6,2,0,0" Command="{Binding SaveApkCommand}"
+                                            Visibility="{Binding CanSaveApk, Converter={StaticResource BoolToVisibility}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource Icon}" Text="&#xE896;" FontSize="12" Margin="0,0,6,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                            <TextBlock Text="{x:Static loc:Strings.SaveApk}" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <Border Grid.Row="1" Style="{StaticResource Badge}" Width="24" Height="24" Padding="0" CornerRadius="12" Margin="0,0,12,12" VerticalAlignment="Top">
+                                    <TextBlock Text="2" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource BodyText}" Margin="0,2,0,12"
+                                           Text="{x:Static loc:Strings.Step2}" />
+
+                                <Border Grid.Row="2" Style="{StaticResource Badge}" Width="24" Height="24" Padding="0" CornerRadius="12" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="3" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                </Border>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource BodyText}" Margin="0,2,0,0">
+                                    <Run Text="{x:Static loc:Strings.Step3Before}" /><Run Text="{Binding PcName, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="{x:Static loc:Strings.Step3After}" />
+                                </TextBlock>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- App settings -->
+                <TextBlock Style="{StaticResource SectionHeader}" Text="{x:Static loc:Strings.AppSection}" />
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <StackPanel>
+                        <Grid Margin="20,12">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xE7E8;" Margin="0,0,16,0" />
+                            <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding StartWithWindows}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.StartWithWindows}" />
+                                    <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.StartWithWindowsHint}" />
+                                </StackPanel>
+                            </CheckBox>
+                        </Grid>
+                        <Separator Margin="0" />
+                        <Grid Margin="20,12">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xF2B7;" Margin="0,0,16,0" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.Language}" />
+                                <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.LanguageHint}" />
+                            </StackPanel>
+                            <ComboBox Grid.Column="2" Width="260" VerticalAlignment="Center"
+                                      ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding SelectedLanguage}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                    <TextBlock Style="{StaticResource CaptionText}" VerticalAlignment="Center">
+                        <Run Text="{x:Static loc:Strings.Version}" /><Run Text="{Binding Version, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding PcName, Mode=OneWay}" />
+                    </TextBlock>
+                    <Button Style="{StaticResource LinkButton}" Content="{x:Static loc:Strings.EventLog}" Margin="12,0,0,0" FontSize="12" Command="{Binding OpenLogsCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

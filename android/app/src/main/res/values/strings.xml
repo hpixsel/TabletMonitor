@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">TabletMonitor</string>
+
+    <!-- Home screen -->
+    <string name="home_subtitle">An extra display for your computer</string>
+    <string name="status_ready">Ready to connect</string>
+    <string name="status_visible_as">Visible as “%1$s”</string>
+    <string name="computers_nearby">Computers nearby</string>
+    <string name="connect">Connect</string>
+    <string name="waiting_for_pc">Waiting for the computer… If this is the first connection, approve it on the computer.</string>
+    <string name="searching_computers">Looking for computers running TabletMonitor…</string>
+    <string name="tip_run_pc">Start TabletMonitor on your Windows computer.</string>
+    <string name="tip_wifi">Connect the tablet to the same Wi-Fi network as the computer.</string>
+    <string name="tip_usb">Or plug it in with a USB cable with USB debugging enabled – the computer connects by itself.</string>
+    <string name="hint_back_twice">While working, press Back twice to turn the screen off.</string>
+    <string name="pc_not_responding">%1$s did not respond. Check whether the connection is waiting for approval on the computer.</string>
+
+    <!-- Stream screen -->
+    <string name="starting_screen">Starting the screen…</string>
+    <string name="connected_to">Connected to %1$s</string>
+    <string name="press_back_again">Press again to turn the screen off</string>
+
+    <!-- Disconnect reasons -->
+    <string name="reason_app_closed">App closed</string>
+    <string name="reason_disconnected">Disconnected</string>
+    <string name="reason_pc_not_responding">The computer stopped responding</string>
+    <string name="reason_pc_ended">The computer ended the connection</string>
+    <string name="reason_connection_lost">Connection lost</string>
+    <string name="reason_screen_off_on_pc">Screen turned off on the computer</string>
+</resources>
