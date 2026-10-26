@@ -151,6 +151,18 @@ public static class Strings
     public static string ReasonTabletNotResponding => T("Tablet przestał odpowiadać", "The tablet stopped responding");
     public static string ReasonDisconnected => T("Rozłączono", "Disconnected");
 
+    // ---------------- Updates ----------------
+
+    public static string UpdateAvailable(string version) => T($"Dostępna jest wersja {version}", $"Version {version} is available");
+    public static string UpdateAvailableHint => T("Pobierzemy ją z GitHuba, sprawdzimy sumę kontrolną i zainstalujemy (jedna zgoda administratora).", "It is downloaded from GitHub, verified with its checksum and installed (one administrator prompt).");
+    public static string UpdateNow => T("Zaktualizuj", "Update");
+    public static string WhatsNew => T("Co nowego", "What's new");
+    public static string Downloading(int percent) => T($"Pobieram… {percent}%", $"Downloading… {percent}%");
+    public static string InstallingUpdate => T("Instaluję aktualizację…", "Installing the update…");
+    public static string UpdateFailed(string message) => T("Aktualizacja nie powiodła się: ", "Update failed: ") + message;
+    public static string CheckForUpdates => T("Sprawdzaj aktualizacje", "Check for updates");
+    public static string CheckForUpdatesHint => T("Nowe wersje z wydań na GitHubie", "New versions from GitHub releases");
+
     // ---------------- Tray ----------------
 
     public static string TrayTurnOff => T("Wyłącz ekran tabletu", "Turn off tablet screen");

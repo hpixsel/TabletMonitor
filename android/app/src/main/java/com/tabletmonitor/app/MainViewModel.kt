@@ -15,6 +15,8 @@ import com.tabletmonitor.app.net.DeviceInfo
 import com.tabletmonitor.app.net.Discovery
 import com.tabletmonitor.app.net.SessionListener
 import com.tabletmonitor.app.net.SessionServer
+import com.tabletmonitor.app.update.Release
+import com.tabletmonitor.app.update.Updater
 import com.tabletmonitor.app.video.StreamView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,6 +24,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
+
+sealed interface UpdateState {
+    data object None : UpdateState
+    data class Available(val release: Release) : UpdateState
+    data class Downloading(val release: Release, val progress: Float) : UpdateState
+    data class Failed(val release: Release, val message: String) : UpdateState
+}
 
 sealed interface ConnectionState {
     data object Waiting : ConnectionState
@@ -50,6 +59,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app), SessionListener {
     private val _addresses = MutableStateFlow<List<String>>(emptyList())
     val addresses: StateFlow<List<String>> = _addresses
 
+    private val _update = MutableStateFlow<UpdateState>(UpdateState.None)
+    val update: StateFlow<UpdateState> = _update
+    private var lastUpdateCheck = 0L
+
     private val discovery = Discovery(viewModelScope) { deviceInfo() }
     val computers: StateFlow<List<Computer>> = discovery.computers
 
@@ -75,6 +88,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app), SessionListener {
         }
         server.start()
         discovery.start()
+        checkForUpdate()
         _addresses.value = discovery.localAddresses()
     }
 
@@ -99,6 +113,42 @@ class MainViewModel(app: Application) : AndroidViewModel(app), SessionListener {
     }
 
     fun disconnect() = server.disconnect()
+
+    // ---------------- Updates (GitHub Releases) ----------------
+
+    private fun checkForUpdate() {
+        val now = System.currentTimeMillis()
+        if (now - lastUpdateCheck < 6 * 60 * 60 * 1000L || _update.value is UpdateState.Downloading) return
+        lastUpdateCheck = now
+        viewModelScope.launch {
+            runCatching { Updater.check() }
+                .onSuccess { release -> _update.value = release?.let { UpdateState.Available(it) } ?: UpdateState.None }
+                .onFailure { android.util.Log.w("Updater", "Update check failed", it) } // offline – try later
+        }
+    }
+
+    /** Downloads, verifies and opens the system installer. Asks for the install permission first if needed. */
+    fun installUpdate() {
+        val release = when (val s = _update.value) {
+            is UpdateState.Available -> s.release
+            is UpdateState.Failed -> s.release
+            else -> return
+        }
+        val app = getApplication<Application>()
+        if (Updater.needsInstallPermission(app)) {
+            Updater.openInstallPermissionSettings(app)
+            return
+        }
+        viewModelScope.launch {
+            _update.value = UpdateState.Downloading(release, 0f)
+            runCatching { Updater.download(app, release) { p -> _update.value = UpdateState.Downloading(release, p) } }
+                .onSuccess { apk ->
+                    _update.value = UpdateState.Available(release)
+                    Updater.install(app, apk)
+                }
+                .onFailure { _update.value = UpdateState.Failed(release, it.message ?: it.javaClass.simpleName) }
+        }
+    }
 
     fun consumeMessage() {
         _message.value = null

@@ -51,9 +51,12 @@ public static class Installer
     // ---------------- Called from the normal (non-elevated) app ----------------
 
     /// <summary>Runs this exe elevated with the given arguments and waits. Returns false when the user declined UAC.</summary>
-    public static async Task<bool> RunElevatedAsync(params string[] args)
+    public static Task<bool> RunElevatedAsync(params string[] args) => RunElevatedAsync(CurrentExe, args);
+
+    /// <summary>Runs <paramref name="exe"/> elevated (e.g. a downloaded update installing itself).</summary>
+    public static async Task<bool> RunElevatedAsync(string exe, params string[] args)
     {
-        var psi = new ProcessStartInfo(CurrentExe)
+        var psi = new ProcessStartInfo(exe)
         {
             UseShellExecute = true,
             Verb = "runas",
@@ -77,6 +80,22 @@ public static class Installer
     }
 
     public static Task<bool> InstallAsync() => RunElevatedAsync("install");
+
+    /// <summary>Installs a downloaded update (it copies itself to Program Files), then restarts into it.</summary>
+    public static async Task<bool> InstallUpdateAsync(string downloadedExe)
+    {
+        if (!await RunElevatedAsync(downloadedExe, "install"))
+            return false;
+        LaunchInstalledAndExit();
+        return true;
+    }
+
+    /// <summary>Removes the previous exe that an update renamed out of the way.</summary>
+    public static void CleanUpAfterUpdate()
+    {
+        try { File.Delete(InstalledExe + ".old"); }
+        catch { /* still in use or not ours to delete – next time */ }
+    }
     public static Task<bool> AddResolutionAsync(int width, int height) => RunElevatedAsync("add-mode", $"{width}x{height}");
     public static Task<bool> UninstallAsync() => RunElevatedAsync("uninstall");
 
@@ -158,7 +177,7 @@ public static class Installer
         Directory.CreateDirectory(InstallDirectory);
         StopService();
         if (!IsRunningInstalled)
-            File.Copy(CurrentExe, InstalledExe, overwrite: true);
+            ReplaceFile(CurrentExe, InstalledExe);
 
         // 2. Driver
         var driverDir = Path.Combine(DataDirectory, "driver");
@@ -212,6 +231,25 @@ public static class Installer
 
         // The running exe cannot delete itself – remove the folder after we exit.
         RunHidden("cmd.exe", $"/c ping 127.0.0.1 -n 3 > nul & rmdir /s /q \"{InstallDirectory}\"", wait: false);
+    }
+
+    /// <summary>
+    /// Copies <paramref name="source"/> over <paramref name="target"/>. A running exe cannot be overwritten but can be
+    /// renamed, so an exe still in use (the app being updated) is moved aside first.
+    /// </summary>
+    private static void ReplaceFile(string source, string target)
+    {
+        try
+        {
+            File.Copy(source, target, overwrite: true);
+        }
+        catch (IOException)
+        {
+            var old = target + ".old";
+            File.Delete(old);
+            File.Move(target, old);
+            File.Copy(source, target);
+        }
     }
 
     private static void StopService()

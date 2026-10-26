@@ -101,6 +101,98 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    // ---------------- Updates ----------------
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateTitle))]
+    private UpdateInfo? _availableUpdate;
+
+    public string UpdateTitle => AvailableUpdate == null ? "" : Strings.UpdateAvailable(AvailableUpdate.Version.ToString(3));
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UpdateNowCommand))]
+    private bool _isUpdating;
+
+    [ObservableProperty]
+    private string _updateStatus = Strings.UpdateAvailableHint;
+
+    public bool CheckForUpdates
+    {
+        get => _settings.CheckForUpdates;
+        set
+        {
+            _settings.CheckForUpdates = value;
+            _settings.Save();
+            OnPropertyChanged();
+            if (value)
+                _ = CheckForUpdatesAsync();
+        }
+    }
+
+    private DispatcherTimer? _updateTimer;
+
+    private void StartUpdateChecks()
+    {
+        Installer.CleanUpAfterUpdate();
+        _updateTimer = new DispatcherTimer(TimeSpan.FromHours(12), DispatcherPriority.Background, (_, _) => _ = CheckForUpdatesAsync(), _ui);
+        _updateTimer.Start();
+        _ = Task.Delay(TimeSpan.FromSeconds(10)).ContinueWith(_ => _ui.BeginInvoke(() => _ = CheckForUpdatesAsync()));
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        if (!_settings.CheckForUpdates || IsUpdating)
+            return;
+        try
+        {
+            var update = await UpdateChecker.CheckAsync();
+            if (update == null || update.Version == AvailableUpdate?.Version)
+                return;
+            AvailableUpdate = update;
+            UpdateStatus = Strings.UpdateAvailableHint;
+            Notify?.Invoke(UpdateTitle, Strings.UpdateAvailableHint);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Update check failed: {ex.Message}"); // offline etc. – try again later
+        }
+    }
+
+    private bool CanUpdateNow() => !IsUpdating;
+
+    [RelayCommand(CanExecute = nameof(CanUpdateNow))]
+    private async Task UpdateNowAsync()
+    {
+        if (AvailableUpdate is not { } update)
+            return;
+        IsUpdating = true;
+        try
+        {
+            UpdateStatus = Strings.Downloading(0);
+            var progress = new Progress<double>(p => UpdateStatus = Strings.Downloading((int)(p * 100)));
+            var exe = await UpdateChecker.DownloadAsync(update, progress);
+            UpdateStatus = Strings.InstallingUpdate;
+            if (!await Installer.InstallUpdateAsync(exe))
+                UpdateStatus = Strings.SetupNeedsAdmin;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Update failed", ex);
+            UpdateStatus = Strings.UpdateFailed(ex.Message);
+        }
+        finally
+        {
+            IsUpdating = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OpenReleaseNotes()
+    {
+        if (AvailableUpdate != null)
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(AvailableUpdate.ReleaseUrl) { UseShellExecute = true });
+    }
+
     public bool TrayHintShown
     {
         get => _settings.TrayHintShown;
@@ -195,7 +287,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         // Before setup the firewall rule does not exist yet – listening now would pop up a Windows dialog.
         if (!NeedsSetup)
+        {
             StartServices();
+            StartUpdateChecks();
+        }
     }
 
     private void StartServices()
@@ -232,6 +327,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _sweepTimer.Stop();
+        _updateTimer?.Stop();
         EndSession(null);
         _discovery?.Dispose();
         _adb?.Dispose();

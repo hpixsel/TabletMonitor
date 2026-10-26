@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 val requested by viewModel.requestedPc.collectAsStateWithLifecycle()
                 val addresses by viewModel.addresses.collectAsStateWithLifecycle()
                 val message by viewModel.message.collectAsStateWithLifecycle()
+                val update by viewModel.update.collectAsStateWithLifecycle()
                 val snackbar = remember { SnackbarHostState() }
 
                 LaunchedEffect(message) {
@@ -99,6 +100,8 @@ class MainActivity : ComponentActivity() {
                                 computers = computers,
                                 requestedPc = requested,
                                 onConnect = viewModel::connectTo,
+                                update = update,
+                                onUpdate = viewModel::installUpdate,
                             )
                         }
                     }

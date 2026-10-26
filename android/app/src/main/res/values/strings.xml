@@ -21,6 +21,13 @@
     <string name="connected_to">Connected to %1$s</string>
     <string name="press_back_again">Press again to turn the screen off</string>
 
+    <!-- Updates -->
+    <string name="update_available">Version %1$s is available</string>
+    <string name="update_hint">Downloaded from GitHub and verified before installing.</string>
+    <string name="update_button">Update</string>
+    <string name="update_downloading">Downloading… %1$d%%</string>
+    <string name="update_failed">Update failed: %1$s</string>
+
     <!-- Disconnect reasons -->
     <string name="reason_app_closed">App closed</string>
     <string name="reason_disconnected">Disconnected</string>

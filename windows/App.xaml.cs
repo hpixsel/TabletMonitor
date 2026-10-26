@@ -32,6 +32,21 @@ public partial class App : Application
                 await UI.Screenshot.RunAsync(args);
                 Shutdown();
                 return;
+            case "--update-check":
+                // Diagnostics: check GitHub and download + verify the update without installing it.
+                try
+                {
+                    var update = await Setup.UpdateChecker.CheckAsync();
+                    var path = update == null ? "none" : await Setup.UpdateChecker.DownloadAsync(update, null);
+                    System.IO.File.WriteAllText(args.ElementAtOrDefault(1) ?? "update-check.txt",
+                        $"current {Setup.UpdateChecker.CurrentVersion}\nlatest {update?.Tag ?? "-"}\nexe {update?.ExeName ?? "-"}\nverified download {path}\n");
+                }
+                catch (Exception ex)
+                {
+                    System.IO.File.WriteAllText(args.ElementAtOrDefault(1) ?? "update-check.txt", ex.ToString());
+                }
+                Shutdown();
+                return;
             case "--touchtest":
                 Shutdown(TouchTest.Run(args));
                 return;

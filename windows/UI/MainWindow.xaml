@@ -122,6 +122,33 @@
                     </Grid>
                 </Border>
 
+                <!-- New version on GitHub -->
+                <Border Style="{StaticResource Card}" Margin="0,8,0,0"
+                        Visibility="{Binding AvailableUpdate, Converter={StaticResource NotEmptyToVisibility}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource BrandBrush}" Margin="0,0,16,0" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xE896;" FontSize="18" Foreground="White" HorizontalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyStrongText}" Text="{Binding UpdateTitle}" />
+                            <TextBlock Style="{StaticResource CaptionText}" Text="{Binding UpdateStatus}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                            <Button Style="{StaticResource LinkButton}" Content="{x:Static loc:Strings.WhatsNew}" Margin="0,0,8,0"
+                                    Command="{Binding OpenReleaseNotesCommand}" />
+                            <ProgressBar Style="{StaticResource Spinner}" Margin="0,0,12,0"
+                                         Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVisibility}}" />
+                            <Button Style="{StaticResource AccentButtonStyle}" MinWidth="110" Content="{x:Static loc:Strings.UpdateNow}"
+                                    Command="{Binding UpdateNowCommand}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
                 <!-- First run: driver installation -->
                 <Border Style="{StaticResource Card}" Margin="0,8,0,0" Padding="28"
                         Visibility="{Binding NeedsSetup, Converter={StaticResource BoolToVisibility}}">
@@ -355,6 +382,17 @@
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.StartWithWindows}" />
                                     <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.StartWithWindowsHint}" />
+                                </StackPanel>
+                            </CheckBox>
+                        </Grid>
+                        <Separator Margin="0" />
+                        <Grid Margin="20,12">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xE895;" Margin="0,0,16,0" />
+                            <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding CheckForUpdates}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{x:Static loc:Strings.CheckForUpdates}" />
+                                    <TextBlock Style="{StaticResource CaptionText}" Text="{x:Static loc:Strings.CheckForUpdatesHint}" />
                                 </StackPanel>
                             </CheckBox>
                         </Grid>

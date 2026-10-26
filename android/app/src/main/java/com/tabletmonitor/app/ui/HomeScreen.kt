@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cable
 import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.DesktopWindows
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.TabletAndroid
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Button
@@ -35,7 +36,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.tabletmonitor.app.R
+import com.tabletmonitor.app.UpdateState
 import com.tabletmonitor.app.net.Computer
 
 @Composable
@@ -59,6 +63,8 @@ fun HomeScreen(
     computers: List<Computer>,
     requestedPc: String?,
     onConnect: (Computer) -> Unit,
+    update: UpdateState = UpdateState.None,
+    onUpdate: () -> Unit = {},
 ) {
     Box(
         Modifier
@@ -76,6 +82,7 @@ fun HomeScreen(
         ) {
             item { Header() }
             item { StatusCard(deviceName, addresses) }
+            if (update !is UpdateState.None) item { UpdateCard(update, onUpdate) }
             item {
                 Text(
                     stringResource(R.string.computers_nearby),
@@ -149,6 +156,51 @@ private fun StatusCard(deviceName: String, addresses: List<String>) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdateCard(state: UpdateState, onUpdate: () -> Unit) {
+    val release = when (state) {
+        is UpdateState.Available -> state.release
+        is UpdateState.Downloading -> state.release
+        is UpdateState.Failed -> state.release
+        UpdateState.None -> return
+    }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.update_available, release.version),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                    Text(
+                        when (state) {
+                            is UpdateState.Downloading -> stringResource(R.string.update_downloading, (state.progress * 100).toInt())
+                            is UpdateState.Failed -> stringResource(R.string.update_failed, state.message)
+                            else -> stringResource(R.string.update_hint)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                    )
+                }
+                if (state !is UpdateState.Downloading) {
+                    Spacer(Modifier.width(12.dp))
+                    FilledTonalButton(onClick = onUpdate) { Text(stringResource(R.string.update_button)) }
+                }
+            }
+            if (state is UpdateState.Downloading) {
+                Spacer(Modifier.height(12.dp))
+                LinearProgressIndicator(progress = { state.progress }, modifier = Modifier.fillMaxWidth())
             }
         }
     }

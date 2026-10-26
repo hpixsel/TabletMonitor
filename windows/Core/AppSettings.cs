@@ -40,6 +40,7 @@ public sealed class AppSettings
     public bool TrayHintShown { get; set; }
     /// <summary>"auto" (follow Windows), "pl" or "en".</summary>
     public string Language { get; set; } = Localization.Strings.Auto;
+    public bool CheckForUpdates { get; set; } = true;
     public Dictionary<string, DeviceSettings> Devices { get; set; } = new();
 
     public DeviceSettings For(string deviceId, string name)

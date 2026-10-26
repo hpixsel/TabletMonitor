@@ -54,6 +54,7 @@ Extended desktop – not a mirror – over Wi-Fi or USB, with native touch.
 | 👆 **Input** | Native Windows touch – tap, scroll, pinch zoom, press-and-hold for right click; the PC mouse cursor is drawn on the tablet |
 | 📶 **Connection** | Automatic discovery on the local network, auto-connect for trusted tablets, approval of new ones on the PC; USB via built-in adb |
 | ⚡ **Streaming** | Hardware H.264 on AMD / NVIDIA / Intel GPUs (Media Foundation), low-latency hardware decoding on Android |
+| 🔄 **Updates** | Both apps check GitHub Releases and update in place; every download is verified against the release's SHA-256 checksums |
 | 🌗 **Apps** | Windows 11 Fluent design and Material 3 on Android, light and dark theme, English and Polish |
 
 ## Known limitations
@@ -82,6 +83,12 @@ Requirements: .NET 10 SDK, JDK 17+ and the Android SDK (`ANDROID_HOME` or `andro
 ```powershell
 ./build.ps1               # → build/TabletMonitor.exe (APK embedded) and build/TabletMonitor.apk
 ./build.ps1 -SkipAndroid  # Windows app only, reuses build/TabletMonitor.apk
+```
+
+Releasing a new version (bumps versions, builds, publishes the release that the apps update from):
+
+```powershell
+./release.ps1 -Version 0.3.0 -NotesFile notes.md
 ```
 
 | Folder | Contents |
