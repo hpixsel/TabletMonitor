@@ -51,10 +51,14 @@ public static class Installer
     // ---------------- Called from the normal (non-elevated) app ----------------
 
     /// <summary>Runs this exe elevated with the given arguments and waits. Returns false when the user declined UAC.</summary>
-    public static Task<bool> RunElevatedAsync(params string[] args) => RunElevatedAsync(CurrentExe, args);
+    public static Task<bool> RunElevatedAsync(params string[] args) => RunExeElevatedAsync(CurrentExe, args);
 
-    /// <summary>Runs <paramref name="exe"/> elevated (e.g. a downloaded update installing itself).</summary>
-    public static async Task<bool> RunElevatedAsync(string exe, params string[] args)
+    /// <summary>
+    /// Runs <paramref name="exe"/> elevated (e.g. a downloaded update installing itself). Deliberately not an
+    /// overload of RunElevatedAsync: with (string, params string[]) C# would bind RunElevatedAsync("install")
+    /// to it and try to start a program called "install".
+    /// </summary>
+    public static async Task<bool> RunExeElevatedAsync(string exe, params string[] args)
     {
         var psi = new ProcessStartInfo(exe)
         {
@@ -84,7 +88,7 @@ public static class Installer
     /// <summary>Installs a downloaded update (it copies itself to Program Files), then restarts into it.</summary>
     public static async Task<bool> InstallUpdateAsync(string downloadedExe)
     {
-        if (!await RunElevatedAsync(downloadedExe, "install"))
+        if (!await RunExeElevatedAsync(downloadedExe, "install"))
             return false;
         LaunchInstalledAndExit();
         return true;
