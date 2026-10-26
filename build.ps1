@@ -45,7 +45,7 @@ if (-not $SkipAndroid) {
 }
 
 Write-Host '==> Windows app' -ForegroundColor Cyan
-dotnet publish (Join-Path $root 'pc\TabletMonitor.Host\TabletMonitor.Host.csproj') -c Release -o (Join-Path $out 'publish')
+dotnet publish (Join-Path $root 'windows\TabletMonitor.csproj') -c Release -o (Join-Path $out 'publish')
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
 Copy-Item (Join-Path $out 'publish\TabletMonitor.exe') (Join-Path $out 'TabletMonitor.exe') -Force
 

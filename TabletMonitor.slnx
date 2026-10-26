@@ -1,5 +1,3 @@
 <Solution>
-  <Folder Name="/pc/">
-    <Project Path="pc/TabletMonitor.Host/TabletMonitor.Host.csproj" />
-  </Folder>
+  <Project Path="windows/TabletMonitor.csproj" />
 </Solution>
