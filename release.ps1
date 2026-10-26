@@ -40,7 +40,8 @@ Set-Content $gradle $g -NoNewline
 & (Join-Path $root 'build.ps1')
 
 # 3. Assets
-$assets = Join-Path $root 'build\release'
+# One folder per version – an older release exe may still be running from its folder.
+$assets = Join-Path $root "build\release\$Version"
 if (Test-Path $assets) { Remove-Item -Recurse -Force $assets }
 New-Item -ItemType Directory $assets | Out-Null
 Copy-Item (Join-Path $root 'build\TabletMonitor.exe') (Join-Path $assets "TabletMonitor-$Version-win-x64.exe")
