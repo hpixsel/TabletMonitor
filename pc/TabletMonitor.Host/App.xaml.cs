@@ -28,6 +28,10 @@ public partial class App : Application
             case "--selftest":
                 Shutdown(SelfTest.Run(args));
                 return;
+            case "--screenshot":
+                await UI.Screenshot.RunAsync(args);
+                Shutdown();
+                return;
             case "--touchtest":
                 Shutdown(TouchTest.Run(args));
                 return;

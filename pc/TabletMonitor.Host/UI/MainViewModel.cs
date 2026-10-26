@@ -38,7 +38,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _sweepTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => RemoveStaleDevices(), _ui);
     }
 
-    public string PcName { get; }
+    public string PcName { get; private set; }
     public string Version => typeof(App).Assembly.GetName().Version?.ToString(3) ?? "";
     public ObservableCollection<DeviceViewModel> Devices { get; } = new();
 
@@ -438,23 +438,43 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public async Task ConnectAsync(DeviceViewModel device)
     {
-        if (NeedsSetup || device.State is DeviceState.Connecting or DeviceState.Connected)
+        // Auto-connect and a request from the tablet often arrive together: only one attempt at a time,
+        // and the device is marked as connecting before the first await.
+        if (NeedsSetup || _connecting || device.State is DeviceState.Connecting or DeviceState.Connected)
             return;
+        _connecting = true;
+        try
+        {
+            await ConnectCoreAsync(device);
+        }
+        finally
+        {
+            _connecting = false;
+        }
+    }
 
+    private bool _connecting;
+
+    private async Task ConnectCoreAsync(DeviceViewModel device)
+    {
         EndSession(null);
+        _autoConnectSuppressed.Remove(device.Id);
+        device.State = DeviceState.Connecting;
+        ActiveDevice = device;
+        Devices.Remove(device);
+
         var gdi = await ServiceClient.EnsureVirtualDisplayAsync();
         if (gdi == null)
         {
+            device.State = DeviceState.Available;
+            ActiveDevice = null;
+            Devices.Insert(0, device);
             if (!VirtualDisplayDriver.IsInstalled)
                 NeedsSetup = true;
             else
                 Notify?.Invoke(Strings.ScreenStartFailed, Strings.ScreenStartFailedText);
             return;
         }
-        _autoConnectSuppressed.Remove(device.Id);
-        device.State = DeviceState.Connecting;
-        ActiveDevice = device;
-        Devices.Remove(device);
 
         var connection = new TabletConnection();
         try
@@ -486,6 +506,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             {
                 if (_session == session)
                     EndSession(reason);
+                else
+                    session.Dispose(); // never leave an orphaned session streaming
             });
             session.StatsUpdated += stats => _ui.BeginInvoke(() => ShowStats(stats));
             _session = session;
@@ -621,6 +643,35 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             _applyingSettings = false;
         }
+    }
+
+    /// <summary>Sample devices for "--screenshot" (README images); no services are started.</summary>
+    internal void LoadDemo(bool connected)
+    {
+        PcName = "MY-PC"; // keep the real machine name out of published screenshots
+        var tablet = new DeviceViewModel("demo-tablet", Transport.WiFi)
+        {
+            Info = new DeviceInfo { Name = "Galaxy Tab S9 FE+", Model = "Samsung SM-X610", Width = 2560, Height = 1600, Refresh = 90, Dpi = 320 },
+        };
+        var phone = new DeviceViewModel("demo-phone", Transport.Usb)
+        {
+            Info = new DeviceInfo { Name = "Pixel 8", Model = "Google Pixel 8", Width = 2400, Height = 1080, Refresh = 120, Dpi = 420 },
+        };
+        Devices.Add(phone);
+        if (connected)
+        {
+            tablet.State = DeviceState.Connected;
+            ActiveDevice = tablet;
+            LoadSessionSettings(tablet.Info, new DeviceSettings());
+            ShowStats(new SessionStats("2560×1600", 60, 14.2, 3, "AMDh264Encoder (GPU)"));
+        }
+        else
+        {
+            Devices.Insert(0, tablet);
+        }
+        OnPropertyChanged(nameof(IsConnected));
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(HasNoDevices));
     }
 
     private static int DisplayConfigScale(DeviceInfo info) =>

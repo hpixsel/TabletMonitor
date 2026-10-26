@@ -4,6 +4,13 @@ Turn an Android tablet or phone into a **real extra monitor** for Windows – an
 
 Everything ships as **one `TabletMonitor.exe`** (the virtual display driver, adb for USB and the Android app are embedded) plus one APK. No Sunshine, Moonlight, spacedesk or extra drivers to install.
 
+**[⬇ Download the latest release](https://github.com/hpixsel/TabletMonitor/releases/latest)**
+
+<p align="center">
+  <img src="docs/images/pc-connected-dark.png" alt="TabletMonitor with a connected tablet (dark theme)" width="49%" />
+  <img src="docs/images/pc-devices-light.png" alt="Tablets found on the network (light theme)" width="49%" />
+</p>
+
 ## Using it
 
 1. Run `TabletMonitor.exe`, click **Install and start** and approve the single UAC prompt.
@@ -55,6 +62,7 @@ The APK is signed with the key in `android/signing/` (not in git: `signing.prope
 - Log: `%LOCALAPPDATA%\TabletMonitor\log.txt` (*Event log* link in the app)
 - `TabletMonitor.exe --selftest out.h264 [W H Hz seconds]` – turns on the virtual display, records the encoded stream to a file and turns it off again (driver + capture + encoder without a tablet)
 - `TabletMonitor.exe --touchtest out.txt` – injects a tap, a drag and a stylus tap into a test window on the virtual display
+- `TabletMonitor.exe --screenshot out.png connected|devices|empty dark|light en|pl [height]` – renders the main window with sample devices (used for the images above)
 - `TabletMonitor.exe --uninstall` – removes the app, the service and the driver (also available in *Settings → Apps*)
 
 ## License
