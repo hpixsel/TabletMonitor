@@ -13,7 +13,7 @@
     <RootNamespace>TabletMonitor</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>0.2.1</Version>
+    <Version>0.2.2</Version>
     <Product>TabletMonitor</Product>
     <Description>Tablet lub telefon jako dodatkowy monitor</Description>
 
