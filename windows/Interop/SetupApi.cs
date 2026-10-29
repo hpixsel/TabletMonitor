@@ -93,6 +93,74 @@ internal static class SetupApi
         return result;
     }
 
+    public const uint DIF_PROPERTYCHANGE = 0x12;
+    public const uint DICS_ENABLE = 1;
+    public const uint DICS_DISABLE = 2;
+    public const uint DICS_FLAG_GLOBAL = 1;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SP_CLASSINSTALL_HEADER
+    {
+        public uint cbSize;
+        public uint InstallFunction;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SP_PROPCHANGE_PARAMS
+    {
+        public SP_CLASSINSTALL_HEADER ClassInstallHeader;
+        public uint StateChange;
+        public uint Scope;
+        public uint HwProfile;
+    }
+
+    [DllImport("setupapi.dll", SetLastError = true)]
+    private static extern bool SetupDiSetClassInstallParams(IntPtr deviceInfoSet, ref SP_DEVINFO_DATA deviceInfoData,
+        ref SP_PROPCHANGE_PARAMS classInstallParams, int classInstallParamsSize);
+
+    /// <summary>
+    /// Enables or disables a device the way Device Manager does (DIF_PROPERTYCHANGE). Unlike "pnputil /enable-device",
+    /// this also works for a root-enumerated device that was disabled across a reboot (pnputil fails with 1167).
+    /// </summary>
+    public static void SetDeviceEnabled(string instanceId, bool enable)
+    {
+        var guid = GUID_DEVCLASS_DISPLAY;
+        var set = SetupDiGetClassDevs(ref guid, IntPtr.Zero, IntPtr.Zero, DIGCF_PRESENT);
+        if (set == new IntPtr(-1))
+            throw new System.ComponentModel.Win32Exception();
+        try
+        {
+            var data = SP_DEVINFO_DATA.Create();
+            for (uint i = 0; SetupDiEnumDeviceInfo(set, i, ref data); i++)
+            {
+                var chars = new char[512];
+                if (!SetupDiGetDeviceInstanceId(set, ref data, chars, chars.Length, out var len) ||
+                    !string.Equals(new string(chars, 0, Math.Max(0, len - 1)), instanceId, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var change = new SP_PROPCHANGE_PARAMS
+                {
+                    ClassInstallHeader = new SP_CLASSINSTALL_HEADER
+                    {
+                        cbSize = (uint)Marshal.SizeOf<SP_CLASSINSTALL_HEADER>(),
+                        InstallFunction = DIF_PROPERTYCHANGE,
+                    },
+                    StateChange = enable ? DICS_ENABLE : DICS_DISABLE,
+                    Scope = DICS_FLAG_GLOBAL,
+                };
+                if (!SetupDiSetClassInstallParams(set, ref data, ref change, Marshal.SizeOf<SP_PROPCHANGE_PARAMS>()) ||
+                    !SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, set, ref data))
+                    throw new System.ComponentModel.Win32Exception();
+                return;
+            }
+            throw new InvalidOperationException($"Device {instanceId} not found.");
+        }
+        finally
+        {
+            SetupDiDestroyDeviceInfoList(set);
+        }
+    }
+
     /// <summary>Creates a root-enumerated device node with the given hardware id (like "devcon install").</summary>
     public static void CreateRootDevice(string hardwareId)
     {

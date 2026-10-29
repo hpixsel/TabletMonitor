@@ -109,6 +109,7 @@ public static class ServiceClient
             return existing;
         if (!await SendAsync("ENABLE"))
             return null;
+        Log.Info("Service switched the virtual display adapter on");
         for (var i = 0; i < 50; i++)
         {
             if (DisplayManager.FindVirtualDisplay() is { } gdi)
@@ -133,9 +134,10 @@ public static class ServiceClient
                 Log.Warn($"Service '{command}': {reply}");
             return reply == "OK";
         }
-        catch (Exception ex) when (ex is System.TimeoutException or OperationCanceledException or IOException)
+        catch (Exception ex)
         {
-            Log.Warn($"Service unavailable for '{command}': {ex.Message}");
+            // Any failure (timeout, broken pipe, access denied …) just means "not done" – never let it escape.
+            Log.Warn($"Service unavailable for '{command}': {ex.GetType().Name}: {ex.Message}");
             return false;
         }
     }

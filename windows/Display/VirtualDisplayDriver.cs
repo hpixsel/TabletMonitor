@@ -173,8 +173,14 @@ public static class VirtualDisplayDriver
     /// </summary>
     public static void SetEnabled(bool enabled)
     {
-        foreach (var id in SetupApi.FindDevices(HardwareId))
-            RunPnpUtil($"{(enabled ? "/enable-device" : "/disable-device")} \"{id}\"");
+        var ids = SetupApi.FindDevices(HardwareId);
+        if (ids.Count == 0)
+            throw new InvalidOperationException("The virtual display driver is not installed.");
+        foreach (var id in ids)
+        {
+            SetupApi.SetDeviceEnabled(id, enabled); // throws on failure – the service then reports an error
+            Log.Info($"{(enabled ? "Enabled" : "Disabled")} {id}");
+        }
     }
 
     /// <summary>Restarts the driver so it re-reads its settings. Must run elevated.</summary>

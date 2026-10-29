@@ -26,6 +26,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly DispatcherTimer _sweepTimer;
     private readonly HashSet<string> _autoConnectSuppressed = new();
+    /// <summary>After a failed attempt auto-connect waits a bit instead of retrying on every announcement.</summary>
+    private readonly Dictionary<string, DateTime> _autoConnectRetryAt = new();
     private DiscoveryService? _discovery;
     private AdbBridge? _adb;
     private TabletSession? _session;
@@ -439,7 +441,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 AskForApproval(device);
         }
         else if (known is { Trusted: true, AutoConnect: true } && _session == null && !info.Busy &&
-                 !_autoConnectSuppressed.Contains(info.Id) && !NeedsSetup)
+                 !_autoConnectSuppressed.Contains(info.Id) && !NeedsSetup &&
+                 (!_autoConnectRetryAt.TryGetValue(info.Id, out var retryAt) || DateTime.UtcNow >= retryAt))
         {
             _ = ConnectAsync(device);
         }
@@ -558,28 +561,27 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         device.State = DeviceState.Connecting;
         ActiveDevice = device;
         Devices.Remove(device);
+        Log.Info($"Connecting to {device.DisplayName} via {device.TransportText}");
 
-        var gdi = await ServiceClient.EnsureVirtualDisplayAsync();
-        if (gdi == null)
-        {
-            device.State = DeviceState.Available;
-            ActiveDevice = null;
-            Devices.Insert(0, device);
-            if (!VirtualDisplayDriver.IsInstalled)
-                NeedsSetup = true;
-            else
-                Notify?.Invoke(Strings.ScreenStartFailed, Strings.ScreenStartFailedText);
-            return;
-        }
-
-        var connection = new TabletConnection();
+        // Everything below runs under one try with time limits: whatever goes wrong, the device must never stay
+        // "connecting" – that state also blocks every further attempt.
+        TabletConnection? connection = null;
         try
         {
+            var gdi = await ServiceClient.EnsureVirtualDisplayAsync().WaitAsync(TimeSpan.FromSeconds(20));
+            if (gdi == null)
+            {
+                if (!VirtualDisplayDriver.IsInstalled)
+                    NeedsSetup = true;
+                throw new DisplayUnavailableException();
+            }
+            Log.Info($"Virtual display {gdi} is on");
+
             string host;
             int port;
             if (device.Transport == Transport.Usb)
             {
-                port = await _adb!.PrepareSessionAsync(device.UsbSerial!);
+                port = await _adb!.PrepareSessionAsync(device.UsbSerial!).WaitAsync(TimeSpan.FromSeconds(20));
                 host = "127.0.0.1";
             }
             else
@@ -588,16 +590,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 port = device.Info.Port;
             }
 
+            connection = new TabletConnection();
             var info = await connection.ConnectAsync(host, port, PcName, TimeSpan.FromSeconds(8));
             if (device.Transport == Transport.Usb)
                 info = info with { Id = device.Id };
             device.Info = info;
+            Log.Info($"Handshake with {host}:{port} done");
 
             var settings = _settings.For(info.Id, device.DisplayName);
             settings.Trusted = true;
             _settings.Save();
 
             var session = new TabletSession(connection, settings, gdi, EnsureResolutionAsync);
+            connection = null; // owned by the session from now on
             session.Ended += reason => _ui.BeginInvoke(() =>
             {
                 if (_session == session)
@@ -608,27 +613,37 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             session.StatsUpdated += stats => _ui.BeginInvoke(() => ShowStats(stats));
             _session = session;
             _sessionSettings = settings;
-            await session.StartAsync();
+            await session.StartAsync().WaitAsync(TimeSpan.FromSeconds(45));
 
             device.State = DeviceState.Connected;
             LoadSessionSettings(device.Info, settings);
             OnPropertyChanged(nameof(IsConnected));
             OnPropertyChanged(nameof(StatusText));
             Log.Info($"Connected to {device.DisplayName} via {device.TransportText}");
+            _autoConnectRetryAt.Remove(device.Id);
         }
         catch (Exception ex)
         {
             Log.Error($"Connecting to {device.DisplayName} failed", ex);
+            _autoConnectRetryAt[device.Id] = DateTime.UtcNow.AddSeconds(30);
+            connection?.Dispose();
             if (_session != null)
-                EndSession(null);
-            else
-                connection.Dispose();
+                EndSession(null); // also returns the device to the list
+            if (ActiveDevice == device)
+                ActiveDevice = null;
             device.State = DeviceState.Available;
-            ActiveDevice = null;
-            Devices.Insert(0, device);
-            Notify?.Invoke(Strings.ConnectFailed, FriendlyError(ex));
+            if (!Devices.Contains(device))
+                Devices.Insert(0, device);
+            OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(HasNoDevices));
+            if (ex is DisplayUnavailableException)
+                Notify?.Invoke(Strings.ScreenStartFailed, Strings.ScreenStartFailedText);
+            else
+                Notify?.Invoke(Strings.ConnectFailed, FriendlyError(ex));
         }
     }
+
+    private sealed class DisplayUnavailableException() : Exception("The virtual display could not be switched on.");
 
     [RelayCommand]
     private void Disconnect()

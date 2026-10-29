@@ -196,7 +196,8 @@ public static class Installer
         RunHidden("sc.exe", $"start {DisplayService.Name}");
 
         // Until a tablet connects the virtual adapter stays off, so no phantom screen shows up in Windows.
-        VirtualDisplayDriver.SetEnabled(false);
+        try { VirtualDisplayDriver.SetEnabled(false); }
+        catch (Exception ex) { Log.Warn($"Could not switch the virtual adapter off: {ex.Message}"); }
 
         // 4. Firewall – tablets announce themselves via UDP broadcast.
         RunHidden("netsh", $"advfirewall firewall delete rule name=\"{AppName}\"");

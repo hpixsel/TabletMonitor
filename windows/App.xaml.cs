@@ -88,6 +88,12 @@ public partial class App : Application
             ex.Handled = true;
         };
         AppDomain.CurrentDomain.UnhandledException += (_, ex) => Log.Error("Unhandled exception", ex.ExceptionObject as Exception);
+        // Fire-and-forget tasks ("_ = SomethingAsync()") must not fail silently.
+        TaskScheduler.UnobservedTaskException += (_, ex) =>
+        {
+            Log.Error("Unobserved task exception", ex.Exception);
+            ex.SetObserved();
+        };
 
         _controller = new AppController(startMinimized: args.Contains("--minimized"));
         SingleInstance.Listen(() => Dispatcher.Invoke(() => _controller.ShowMainWindow()));
