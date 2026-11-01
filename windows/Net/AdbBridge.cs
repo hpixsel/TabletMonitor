@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using TabletMonitor.Setup;
 
@@ -28,6 +29,13 @@ public sealed partial class AdbBridge : IDisposable
     public event Action<IReadOnlyList<UsbDevice>>? DevicesChanged;
 
     public static bool IsAvailable => Installer.HasResource("adb/adb.exe");
+
+    static AdbBridge()
+    {
+        // Child processes inherit this: if Windows is already ending the session when adb starts, the loader
+        // fails (0xc0000142) and would otherwise show an "Application Error" box during shutdown.
+        SetErrorMode(SetErrorMode(0) | SEM_FAILCRITICALERRORS);
+    }
 
     public AdbBridge()
     {
@@ -166,6 +174,8 @@ public sealed partial class AdbBridge : IDisposable
 
     private async Task<string> RunAsync(string args, TimeSpan timeout)
     {
+        // Never start adb after Dispose – during Windows shutdown it cannot start and shows an error box.
+        _cts.Token.ThrowIfCancellationRequested();
         var psi = new ProcessStartInfo(_adb, args)
         {
             CreateNoWindow = true,
@@ -192,19 +202,32 @@ public sealed partial class AdbBridge : IDisposable
     public void Dispose()
     {
         _cts.Cancel();
-        if (_serverStarted)
+        if (!_serverStarted)
+            return;
+        // Stop our adb server without starting another adb ("kill-server") – Dispose also runs while Windows
+        // is shutting down, when new processes fail to start. Only our own copy is touched, not other adb servers.
+        foreach (var p in Process.GetProcessesByName("adb"))
         {
             try
             {
-                using var p = Process.Start(new ProcessStartInfo(_adb, "kill-server") { CreateNoWindow = true, UseShellExecute = false });
-                p?.WaitForExit(2000);
+                if (string.Equals(p.MainModule?.FileName, _adb, StringComparison.OrdinalIgnoreCase))
+                    p.Kill();
             }
             catch
             {
-                // ignore
+                // Already gone or not accessible.
+            }
+            finally
+            {
+                p.Dispose();
             }
         }
     }
+
+    private const uint SEM_FAILCRITICALERRORS = 0x0001;
+
+    [DllImport("kernel32.dll")]
+    private static extern uint SetErrorMode(uint mode);
 
     [GeneratedRegex(@"(\d+)x(\d+)")]
     private static partial Regex SizeRegex();
